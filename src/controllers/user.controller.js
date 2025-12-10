@@ -250,7 +250,146 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 })
 
-export { registerUser, 
-    loginUser, 
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+
+    const { oldPassword, newPassword } = req.body;
+
+    // with the help of the middleware verifyJWT we get the req.user
+    const user = await User.findById(req.user?._id);
+
+    // checking whether the oldPassword is correct or not
+    // using isPasswordCorrect which takes password as input and
+    // compares the pwd and pwd in database with bcrypt.compare
+    const isPasswordValid = await user.isPasswordCorrect(oldPassword);
+
+    if (!isPasswordValid) {
+        throw new ApiError(400, "Invalid Password");
+    }
+
+    // if password is modified
+    user.password = newPassword;
+    await user.save({ validateBeforeSave: false });
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "Password Changed Successfully"))
+})
+
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+    return res
+        .status(200)
+        .json(new ApiResponse(200, req.user, "Current User Fetched Successfully"))
+})
+
+// updating the text based data
+const updateAccountDetails = asyncHandler(async (req, res) => {
+
+    const { fullName, email } = req.body;
+
+    if (!fullName || !email) {
+        throw new ApiError(400, "All Fields Are Required")
+    }
+
+    // find and update the fullName and email 
+    // here we are excluding the password
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                fullName,
+                email
+            }
+        },
+        {
+            new: true
+        }
+    ).select("-password")
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, user, "Account Details Updated Successfully"))
+})
+
+
+// updating the files
+// updating avatar
+const updateUserAvatar = asyncHandler(async (req, res) => {
+
+    const avatarLocalPath = req.file?.path;
+
+    if (!avatarLocalPath) {
+        throw new ApiError(400, "Avatar File Is Missing")
+    }
+
+    const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+    if (!avatar.url) {
+        throw new ApiError(400, "Error While Uploading On Avatar")
+    }
+
+    // in databse we store url of the avatar and in 
+    // cloudinary we store avatar,
+    // updating in db use avatar.url
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                avatar: avatar.url
+            }
+        },
+        { new: true }
+    ).select("-password")
+
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, user, "Avatar Updated Successfully"))
+})
+
+// upadating the coverImage
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+
+    const coverImageLocalPath = req.file?.path;
+
+    if (!coverImageLocalPath) {
+        throw new ApiError(400, "CoverImage File Is Missing")
+    }
+    // uploading img from multer to clodinary
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+    if (!coverImage.url) {
+        throw new ApiResponse(400, "Error While Uploading On CoverImage")
+    }
+
+    // upading with coverImage.url in db 
+    // and to exlude the password in response we are using the select
+    const user = await User.findByIdAndUpdate(
+        req.user?.id,
+        {
+            $set: {
+                coverImage: coverImage.url
+            }
+        },
+        { new: true }
+    ).select("-password")
+
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, user, "CoverImage Updated Successfully"))
+        
+})
+
+
+export {
+    registerUser,
+    loginUser,
     logoutUser,
-    refreshAccessToken }
+    refreshAccessToken,
+    changeCurrentPassword,
+    getCurrentUser,
+    updateAccountDetails,
+    updateUserAvatar,
+    updateUserCoverImage
+}
