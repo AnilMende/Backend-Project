@@ -192,7 +192,10 @@ const logoutUser = asyncHandler(async (req, res) => {
 
 })
 
-
+// This will be the endpoint when the accessToken expires and we need to
+// make user in login and to generate the new acccess Token
+// we use the refeshToken to generate the new pair of access and refreshToken
+// by this user can stay in login state which improves the user experience
 const refreshAccessToken = asyncHandler(async (req, res) => {
 
     // accessing the refresh Token from cookies and req.body
