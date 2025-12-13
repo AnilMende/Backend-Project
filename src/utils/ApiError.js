@@ -7,6 +7,7 @@ class ApiError extends Error{
     ){
         super(message)
         this.statusCode = statusCode
+        // no data leakage on erros so data is set to null
         this.data = null
         this.message = message
         this.success = false
